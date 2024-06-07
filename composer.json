@@ -1,0 +1,29 @@
+{
+    "name": "ock/class-discovery",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andreas Hennings",
+            "email": "andreas@dqxtech.net"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Ock\\Testing\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ock\\Testing\\Tests": "tests/src"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "ock/helpers": "@dev",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    }
+}
