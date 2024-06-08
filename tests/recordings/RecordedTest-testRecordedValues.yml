@@ -15,10 +15,10 @@ values:
       properties: {  }
   -
     'anonymous class':
-      class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:23$4d"
+      class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:**"
       properties: {  }
   -
     'anonymous class with property':
-      class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:24$4e"
+      class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:**"
       properties:
         $x: 5

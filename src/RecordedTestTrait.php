@@ -224,8 +224,17 @@ trait RecordedTestTrait {
       );
     }
     if (is_object($value)) {
-      $export = ['class' => \get_class($value)];
-      $properties = (new \ReflectionClass($value))->getProperties();
+      $reflectionClass = new \ReflectionClass($value);
+      $classNameExport = $reflectionClass->getName();
+      if ($reflectionClass->isAnonymous()) {
+        if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
+          // Replace the line number and the hash-like suffix.
+          // This will make the asserted value more stable.
+          $classNameExport = $matches[1] . '**';
+        }
+      }
+      $export = ['class' => $classNameExport];
+      $properties = $reflectionClass->getProperties();
       if ($depth <= 0) {
         $export['properties'] = '...';
         return $export;
