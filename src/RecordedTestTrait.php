@@ -185,9 +185,11 @@ trait RecordedTestTrait {
    *   The actual value to compare.
    * @param string|null $key
    *   A key or message to add to the value.
+   * @param int $depth
+   *   Depth for yaml export.
    */
-  public function assertAsRecorded(mixed $actual, string $key = null): void {
-    $actual = $this->exportForYaml($actual);
+  public function assertAsRecorded(mixed $actual, string $key = null, int $depth = 2): void {
+    $actual = $this->exportForYaml($actual, $depth);
     if ($key !== null) {
       $actual = [$key => $actual];
     }
