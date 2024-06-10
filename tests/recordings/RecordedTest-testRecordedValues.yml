@@ -6,19 +6,15 @@ values:
   -
     'empty object':
       class: stdClass
-      properties: {  }
   -
     'empty array': {  }
   -
     'stdClass object with a property':
       class: stdClass
-      properties: {  }
   -
     'anonymous class':
       class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:**"
-      properties: {  }
   -
     'anonymous class with property':
       class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:**"
-      properties:
-        $x: 5
+      $x: 5

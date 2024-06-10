@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ock\Testing;
 
 use Ock\ClassDiscovery\NamespaceDirectory;
+use Ock\ClassDiscovery\Reflection\ClassReflection;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -132,6 +133,8 @@ trait RecordedTestTrait {
     if (!\is_dir(\dirname($file))) {
       \mkdir(dirname($file), recursive: true);
     }
+    // Verify that the export is reversible.
+    static::assertSame($yaml_data, Yaml::parse($yaml));
     file_put_contents($file, $yaml);
 
     return $result;
@@ -146,7 +149,7 @@ trait RecordedTestTrait {
       $header['dataset name'] = $dataName;
     }
     if ($args !== []) {
-      $header['arguments'] = $args;
+      $header['arguments'] = $this->exportForYaml($args);
     }
     return $header;
   }
@@ -210,56 +213,137 @@ trait RecordedTestTrait {
    *
    * @param mixed $value
    * @param int $depth
+   * @param string|int|null $key
+   *   Array key or property name in the parent structure.
+   *   This is unused here, but can be used in child methods.
    *
    * @return mixed
    *   Exported value.
    *   This won't contain any objects.
    */
-  protected function exportForYaml(mixed $value, int $depth = 2): mixed {
+  protected function exportForYaml(mixed $value, int $depth = 2, string|int $key = null): mixed {
     if (\is_array($value)) {
       if ($depth <= 0) {
         return '[...]';
       }
       return \array_map(
-        fn ($v) => $this->exportForYaml($v, $depth - 1),
-        $value
+        fn ($k) => $this->exportForYaml($value[$k], $depth - 1, $k),
+        \array_combine(array_keys($value), array_keys($value)),
       );
     }
     if (is_object($value)) {
-      $reflectionClass = new \ReflectionClass($value);
-      $classNameExport = $reflectionClass->getName();
-      if ($reflectionClass->isAnonymous()) {
-        if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
-          // Replace the line number and the hash-like suffix.
-          // This will make the asserted value more stable.
-          $classNameExport = $matches[1] . '**';
-        }
-      }
-      $export = ['class' => $classNameExport];
-      $properties = $reflectionClass->getProperties();
-      if ($depth <= 0) {
-        $export['properties'] = '...';
-        return $export;
-      }
-      $export['properties'] = [];
-      foreach ($properties as $property) {
-        if ($property->isStatic()) {
-          continue;
-        }
-        try {
-          $propertyValue = $property->getValue($value);
-        }
-        catch (\Throwable) {
-          $propertyValue = '(not initialized)';
-        }
-        $export['properties']['$' . $property->name] = $this->exportForYaml($propertyValue, 0);
-      }
-      return $export;
+      return $this->exportObjectForYaml($value, $depth, $key);
     }
     if (\is_resource($value)) {
       return 'resource';
     }
     return $value;
+  }
+
+  protected function exportObjectForYaml(object $object, int $depth, int|string $key = null): array {
+    return $this->doExportObjectForYaml($object, $depth);
+  }
+
+  protected function doExportObjectForYaml(object $object, int $depth, bool $getters = false, object $compare = null): array {
+    $reflectionClass = new \ReflectionClass($object);
+    $classNameExport = $reflectionClass->getName();
+    if ($reflectionClass->isAnonymous()) {
+      if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
+        // Replace the line number and the hash-like suffix.
+        // This will make the asserted value more stable.
+        $classNameExport = $matches[1] . '**';
+      }
+    }
+    $export = ['class' => $classNameExport];
+    if ($depth <= 0) {
+      return $export;
+    }
+    if (!$getters) {
+      $export += $this->exportObjectProperties($object, $depth - 1);
+    }
+    else {
+      $export += $this->exportObjectProperties($object, $depth - 1, true);
+      $export += $this->exportObjectGetterValues($object, $depth - 1);
+    }
+    if ($compare) {
+      $compare_export = $this->doExportObjectForYaml($compare, $depth, $getters);
+      unset($compare_export['class']);
+      $export = $this->arrayDiffAssocStrict($export, $compare_export);
+    }
+    return $export;
+  }
+
+  protected function exportObjectWithGetters(object $object, int $depth, int|string $key = null): array {
+    $reflectionClass = new \ReflectionClass($object);
+    $classNameExport = $reflectionClass->getName();
+    if ($reflectionClass->isAnonymous()) {
+      if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
+        // Replace the line number and the hash-like suffix.
+        // This will make the asserted value more stable.
+        $classNameExport = $matches[1] . '**';
+      }
+    }
+    $export = ['class' => $classNameExport];
+    if ($depth <= 0) {
+      $export['properties'] = '...';
+      return $export;
+    }
+    $export['properties'] = $this->exportObjectProperties($object, 0, true);
+    $export['getters'] = $this->exportObjectGetterValues($object, 0);
+    return $export;
+  }
+
+  /**
+   * @param object $object
+   * @param int $depth
+   * @param bool $public
+   *   TRUE to only export public properties.
+   *
+   * @return array|string
+   */
+  protected function exportObjectProperties(object $object, int $depth, bool $public = false): array|string {
+    $reflector = new ClassReflection($object);
+    $properties = $reflector->getFilteredProperties(static: false, public: $public ?: null);
+    $export = [];
+    foreach ($properties as $property) {
+      try {
+        $propertyValue = $property->getValue($object);
+      }
+      catch (\Throwable) {
+        $propertyValue = '(not initialized)';
+      }
+      $export['$' . $property->name] = $this->exportForYaml($propertyValue, $depth - 1);
+    }
+    return $export;
+  }
+
+  protected function exportObjectGetterValues(object $object, int $depth): array|string {
+    $reflector = new ClassReflection($object);
+    $result = [];
+    foreach ($reflector->getFilteredMethods(static: false, public: true, constructor: false) as $method) {
+      if ($method->hasRequiredParameters()
+        || (string) ($method->getReturnType() ?? '?') === 'void'
+        || (string) ($method->getReturnType() ?? '?') === 'never'
+        || !\preg_match('#^(get|is|has)[A-Z]#', $method->name)
+      ) {
+        // This is not a getter method.
+        continue;
+      }
+      $value = $object->{$method->name}();
+      $result[$method->name . '()'] = $this->exportForYaml($value, $depth - 1);
+    }
+    \ksort($result);
+    return $result;
+  }
+
+  protected function arrayDiffAssocStrict(array $a, array $b): array {
+    $diff = \array_filter(
+      $a,
+      fn (mixed $v, string|int $k) => !\array_key_exists($k, $b)
+        || $v !== $b[$k],
+      \ARRAY_FILTER_USE_BOTH,
+    );
+    return $diff;
   }
 
 }
