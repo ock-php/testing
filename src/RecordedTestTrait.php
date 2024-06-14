@@ -5,8 +5,15 @@ declare(strict_types=1);
 namespace Ock\Testing;
 
 use Ock\ClassDiscovery\NamespaceDirectory;
-use Ock\ClassDiscovery\Reflection\ClassReflection;
-use Symfony\Component\Yaml\Yaml;
+use Ock\Testing\Exporter\Exporter_ToYamlArray;
+use Ock\Testing\Exporter\ExporterInterface;
+use Ock\Testing\Recorder\AssertionRecorder_RecordingMode;
+use Ock\Testing\Recorder\AssertionRecorder_ReplayMode;
+use Ock\Testing\Recorder\AssertionRecorderInterface;
+use Ock\Testing\Storage\AssertionValueStore_Yaml;
+use Ock\Testing\Storage\AssertionValueStoreInterface;
+use PHPUnit\Framework\Assert;
+use PHPUnit\Util\Test;
 
 /**
  * Mechanism where expected values are pre-recorded.
@@ -25,150 +32,38 @@ use Symfony\Component\Yaml\Yaml;
  */
 trait RecordedTestTrait {
 
-  /**
-   * Recorded values for or from the assertions.
-   *
-   * In default/playback mode, these values are loaded from a yaml file.
-   * In recording mode, the values are collected from the assertion calls.
-   *
-   * @var list<mixed>
-   */
-  private array $recordedValues;
+  private ?AssertionRecorderInterface $recorder = null;
 
   /**
-   * Current index in the `$recordedValues`.
+   * Verifies that no left-over recording files exist.
    *
-   * @var int
+   * This could happen if a test method was removed or renamed, or a data
+   * provider dataset key was changed.
    */
-  private int $recordingIndex;
-
-  /**
-   * Backup of the original method name.
-   *
-   * @var string
-   */
-  private string $originalName;
-
-  /**
-   * {@inheritdoc}
-   */
-  public function runTest(): mixed {
-    $this->originalName = $this->getName(false);
-    if ($this->isRecording()) {
-      $this->setName('runTestAndUpdate');
+  public function testLeftoverRecordedFiles(): void {
+    $storage = $this->createAssertionStore();
+    $stored_names = $storage->getStoredNames();
+    $rc = new \ReflectionClass(static::class);
+    $expected_names = [];
+    foreach ($rc->getMethods() as $rm) {
+      if (!Test::isTestMethod($rm)) {
+        continue;
+      }
+      $datasets = Test::getProvidedData(static::class, $rm->name);
+      $data_names = \is_array($datasets)
+        ? \array_keys($datasets)
+        : [''];
+      foreach ($data_names as $data_name) {
+        if ($data_name === '') {
+          $expected_names[] = $rm->name;
+        }
+        else {
+          $expected_names[] = $rm->name . '-' . $data_name;
+        }
+      }
     }
-    else {
-      $this->setName('runTestAndCompare');
-    }
-    return parent::runTest();
-  }
-
-  /**
-   * Placeholder test method.
-   *
-   * This runs as a decorator of the actual test method.
-   *
-   * @param mixed ...$args
-   *   Arguments to pass to the test method.
-   *
-   * @return mixed
-   *   Return value from the test method.
-   *   Usually this is just null/void.
-   */
-  protected function runTestAndCompare(...$args): mixed {
-    // Restore the original test name.
-    $this->setName($this->originalName);
-    $file = $this->getRecordingFile();
-
-    static::assertFileExists($file);
-    $yaml_data = Yaml::parseFile($file);
-    static::assertIsArray($yaml_data);
-
-    // Verify test metadata.
-    $header = $yaml_data;
-    unset($header['values']);
-    static::assertSame($this->buildHeader($args), $header);
-
-    static::assertArrayHasKey('values', $yaml_data);
-    static::assertIsArray($yaml_data['values']);
-    $this->recordedValues = $yaml_data['values'];
-    $this->recordingIndex = 0;
-
-    // Run the decorated method.
-    $result = $this->{$this->originalName}(...$args);
-
-    // Check for expected values that were not asserted for.
-    static::assertArrayNotHasKey($this->recordingIndex, $this->recordedValues, "Premature end with index $this->recordingIndex.");
-
-    return $result;
-  }
-
-  /**
-   * Placeholder test method.
-   *
-   * This runs as a decorator of the actual test method.
-   *
-   * @param mixed ...$args
-   *   Arguments to pass to the test method.
-   *
-   * @return mixed
-   *   Return value from the test method.
-   *   Usually this is just null/void.
-   */
-  protected function runTestAndUpdate(...$args): mixed {
-    // Restore the original test name.
-    $this->setName($this->originalName);
-    $file = $this->getRecordingFile();
-
-    $this->recordedValues = [];
-    $this->recordingIndex = 0;
-
-    // Run the decorated method.
-    $result = $this->{$this->originalName}(...$args);
-
-    // Update the yaml file.
-    $yaml_data = $this->buildHeader($args);
-    $yaml_data['values'] = $this->recordedValues;
-    $yaml = Yaml::dump($yaml_data, 99, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-    if (!\is_dir(\dirname($file))) {
-      \mkdir(dirname($file), recursive: true);
-    }
-    // Verify that the export is reversible.
-    static::assertSame($yaml_data, Yaml::parse($yaml));
-    file_put_contents($file, $yaml);
-
-    return $result;
-  }
-
-  protected function buildHeader(array $args): array {
-    $header = [
-      'test' => static::class . '::' . $this->originalName . '()',
-    ];
-    $dataName = $this->dataName() ?? '';
-    if ($dataName !== '') {
-      $header['dataset name'] = $dataName;
-    }
-    if ($args !== []) {
-      $header['arguments'] = $this->exportForYaml($args);
-    }
-    return $header;
-  }
-
-  protected function getRecordingFile(): string {
-    $nsdir = NamespaceDirectory::fromKnownClass(static::class)
-      ->package(3);
-    $tns = $nsdir->getTerminatedNamespace();
-    $name = static::class;
-    if (\str_starts_with($name, $tns)) {
-      $name = \substr($name, \strlen($tns));
-    }
-    $name .= '-' . $this->getName(false);
-    $dataName = $this->dataName() ?? '';
-    if ($dataName !== '') {
-      $name .= '-' . $dataName;
-    }
-    $name = \preg_replace('@[^\w\-]@', '.', $name);
-    return $nsdir->getPackageDirectory(level: 3) . '/recordings/' . $name . '.yml';
+    $leftover_names = array_diff($stored_names, $expected_names);
+    Assert::assertEmpty($leftover_names);
   }
 
   /**
@@ -186,164 +81,115 @@ trait RecordedTestTrait {
    *
    * @param mixed $actual
    *   The actual value to compare.
-   * @param string|null $key
+   * @param string|null $label
    *   A key or message to add to the value.
    * @param int $depth
    *   Depth for yaml export.
    */
-  public function assertAsRecorded(mixed $actual, string $key = null, int $depth = 2): void {
-    $actual = $this->exportForYaml($actual, $depth);
-    if ($key !== null) {
-      $actual = [$key => $actual];
+  public function assertAsRecorded(mixed $actual, string $label = null, int $depth = 2): void {
+    $actual = $this->exportForYaml($actual, $label, $depth);
+    $this->recorder ??= $this->createRecorder();
+    $this->recorder->assertValue($actual);
+  }
+
+  /**
+   * @after
+   */
+  public function tearDownRecorder(): void {
+    if (!$this->hasFailed()) {
+      $this->recorder ??= $this->createRecorder();
+      $this->recorder->assertEnd();
     }
+  }
+
+  /**
+   * Creates the recorder object.
+   *
+   * This can be overridden in test classes, if needed.
+   */
+  protected function createRecorder(): AssertionRecorderInterface {
+    $name = $this->getName(false);
+    $dataName = $this->dataName() ?? '';
+    if ($dataName !== '') {
+      $name .= '-' . $dataName;
+    }
+    $storage = $this->createAssertionStore();
     if ($this->isRecording()) {
-      $this->recordedValues[] = $actual;
-      static::assertTrue(true);
+      $recorder = new AssertionRecorder_RecordingMode(
+        fn ($values) => $storage->save($name, $values),
+      );
     }
     else {
-      static::assertArrayHasKey($this->recordingIndex, $this->recordedValues, 'Unexpected assertion.');
-      $expected = $this->recordedValues[$this->recordingIndex];
-      ++$this->recordingIndex;
-      static::assertSame($expected, $actual);
+      $recorder = new AssertionRecorder_ReplayMode(
+        fn () => $storage->load($name),
+      );
     }
+    // @todo Add exporter decorator.
+    return $recorder;
+  }
+
+  /**
+   * Creates a storage for the assertion recorder.
+   */
+  protected function createAssertionStore(): AssertionValueStoreInterface {
+    $nsdir = NamespaceDirectory::fromKnownClass(static::class)
+      ->package(3);
+    $tns = $nsdir->getTerminatedNamespace();
+    $relativeClassName = static::class;
+    if (\str_starts_with($relativeClassName, $tns)) {
+      $relativeClassName = \substr($relativeClassName, \strlen($tns));
+    }
+    $base = $nsdir->getPackageDirectory(level: 3) . '/recordings/' . $relativeClassName . '-';
+    return new AssertionValueStore_Yaml(
+      $base,
+      $this->buildYamlHeader(...),
+    );
+  }
+
+  /**
+   * Builds a header for the yaml file.
+   *
+   * The header contains metadata about the test.
+   *
+   * @return array
+   */
+  protected function buildYamlHeader(): array {
+    $args = $this->getProvidedData();
+    $header = [
+      'test' => static::class . '::' . $this->getName(false) . '()',
+    ];
+    $dataName = $this->dataName() ?? '';
+    if ($dataName !== '') {
+      $header['dataset name'] = $dataName;
+    }
+    if ($args !== []) {
+      $header['arguments'] = $this->exportForYaml($args);
+    }
+    return $header;
   }
 
   /**
    * Exports values for yaml.
    *
    * @param mixed $value
+   * @param string|null $label
+   *   Label to add to the value.
    * @param int $depth
-   * @param string|int|null $key
-   *   Array key or property name in the parent structure.
-   *   This is unused here, but can be used in child methods.
+   *   Maximum depth for recursive export.
    *
    * @return mixed
    *   Exported value.
    *   This won't contain any objects.
    */
-  protected function exportForYaml(mixed $value, int $depth = 2, string|int $key = null): mixed {
-    if (\is_array($value)) {
-      if ($depth <= 0) {
-        return '[...]';
-      }
-      return \array_map(
-        fn ($k) => $this->exportForYaml($value[$k], $depth - 1, $k),
-        \array_combine(array_keys($value), array_keys($value)),
-      );
-    }
-    if (is_object($value)) {
-      return $this->exportObjectForYaml($value, $depth, $key);
-    }
-    if (\is_resource($value)) {
-      return 'resource';
-    }
-    return $value;
-  }
-
-  protected function exportObjectForYaml(object $object, int $depth, int|string $key = null): array {
-    return $this->doExportObjectForYaml($object, $depth);
-  }
-
-  protected function doExportObjectForYaml(object $object, int $depth, bool $getters = false, object $compare = null): array {
-    $reflectionClass = new \ReflectionClass($object);
-    $classNameExport = $reflectionClass->getName();
-    if ($reflectionClass->isAnonymous()) {
-      if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
-        // Replace the line number and the hash-like suffix.
-        // This will make the asserted value more stable.
-        $classNameExport = $matches[1] . '**';
-      }
-    }
-    $export = ['class' => $classNameExport];
-    if ($depth <= 0) {
-      return $export;
-    }
-    if (!$getters) {
-      $export += $this->exportObjectProperties($object, $depth - 1);
-    }
-    else {
-      $export += $this->exportObjectProperties($object, $depth - 1, true);
-      $export += $this->exportObjectGetterValues($object, $depth - 1);
-    }
-    if ($compare) {
-      $compare_export = $this->doExportObjectForYaml($compare, $depth, $getters);
-      unset($compare_export['class']);
-      $export = $this->arrayDiffAssocStrict($export, $compare_export);
-    }
-    return $export;
-  }
-
-  protected function exportObjectWithGetters(object $object, int $depth, int|string $key = null): array {
-    $reflectionClass = new \ReflectionClass($object);
-    $classNameExport = $reflectionClass->getName();
-    if ($reflectionClass->isAnonymous()) {
-      if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
-        // Replace the line number and the hash-like suffix.
-        // This will make the asserted value more stable.
-        $classNameExport = $matches[1] . '**';
-      }
-    }
-    $export = ['class' => $classNameExport];
-    if ($depth <= 0) {
-      $export['properties'] = '...';
-      return $export;
-    }
-    $export['properties'] = $this->exportObjectProperties($object, 0, true);
-    $export['getters'] = $this->exportObjectGetterValues($object, 0);
-    return $export;
+  protected function exportForYaml(mixed $value, string $label = null, int $depth = 2): mixed {
+    return $this->createExporter()->export($value, $label, $depth);
   }
 
   /**
-   * @param object $object
-   * @param int $depth
-   * @param bool $public
-   *   TRUE to only export public properties.
-   *
-   * @return array|string
+   * Creates an exporter to process asserted values.
    */
-  protected function exportObjectProperties(object $object, int $depth, bool $public = false): array|string {
-    $reflector = new ClassReflection($object);
-    $properties = $reflector->getFilteredProperties(static: false, public: $public ?: null);
-    $export = [];
-    foreach ($properties as $property) {
-      try {
-        $propertyValue = $property->getValue($object);
-      }
-      catch (\Throwable) {
-        $propertyValue = '(not initialized)';
-      }
-      $export['$' . $property->name] = $this->exportForYaml($propertyValue, $depth - 1);
-    }
-    return $export;
-  }
-
-  protected function exportObjectGetterValues(object $object, int $depth): array|string {
-    $reflector = new ClassReflection($object);
-    $result = [];
-    foreach ($reflector->getFilteredMethods(static: false, public: true, constructor: false) as $method) {
-      if ($method->hasRequiredParameters()
-        || (string) ($method->getReturnType() ?? '?') === 'void'
-        || (string) ($method->getReturnType() ?? '?') === 'never'
-        || !\preg_match('#^(get|is|has)[A-Z]#', $method->name)
-      ) {
-        // This is not a getter method.
-        continue;
-      }
-      $value = $object->{$method->name}();
-      $result[$method->name . '()'] = $this->exportForYaml($value, $depth - 1);
-    }
-    \ksort($result);
-    return $result;
-  }
-
-  protected function arrayDiffAssocStrict(array $a, array $b): array {
-    $diff = \array_filter(
-      $a,
-      fn (mixed $v, string|int $k) => !\array_key_exists($k, $b)
-        || $v !== $b[$k],
-      \ARRAY_FILTER_USE_BOTH,
-    );
-    return $diff;
+  protected function createExporter(): ExporterInterface {
+    return new Exporter_ToYamlArray();
   }
 
 }
