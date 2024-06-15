@@ -129,8 +129,16 @@ class Exporter_ToYamlArray implements ExporterInterface {
    */
   protected function exportRecursive(mixed $value, int $depth = 2, string|int|null $key = null): mixed {
     if (\is_array($value)) {
+      if ($value === []) {
+        return [];
+      }
       if ($depth <= 0) {
-        return '[...]';
+        if (array_is_list($value)) {
+          return '[...]';
+        }
+        else {
+          return '{...}';
+        }
       }
       return \array_map(
         fn ($k) => $this->exportRecursive($value[$k], $depth - 1, $k),
