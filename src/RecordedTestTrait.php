@@ -89,6 +89,41 @@ trait RecordedTestTrait {
   }
 
   /**
+   * Asserts that an array of objects is as recorded.
+   *
+   * @param object[] $objects
+   * @param string|null $label
+   * @param int $depth
+   * @param string|null $defaultClass
+   *   Omit the 'class' if identical to the default class.
+   * @param bool $arrayKeyIsDefaultClass
+   *   Whether to omit the 'class' key, if identical to array key.
+   * @param string|null $arrayKeyIsDefaultFor
+   *   Result property to omit if identical to array key.
+   */
+  protected function assertObjectsAsRecorded(
+    array $objects,
+    string $label = null,
+    int $depth = 2,
+    string $defaultClass = null,
+    bool $arrayKeyIsDefaultClass = false,
+    string $arrayKeyIsDefaultFor = null,
+  ): void {
+    $export = $this->exportForYaml($objects, depth: $depth);
+    foreach ($export as $key => $item) {
+      if (($item['class'] ?? false) === $defaultClass
+        || ($arrayKeyIsDefaultClass && ($item['class'] ?? false) === $key)
+      ) {
+        unset($export[$key]['class']);
+      }
+      if ($arrayKeyIsDefaultFor !== null && ($item[$arrayKeyIsDefaultFor] ?? false) === $key) {
+        unset($export[$key][$arrayKeyIsDefaultFor]);
+      }
+    }
+    $this->assertAsRecorded($export, $label, $depth + 2);
+  }
+
+  /**
    * Asserts that a value is the same as a previously recorded value.
    *
    * @param mixed $actual
