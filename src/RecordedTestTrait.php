@@ -35,6 +35,18 @@ trait RecordedTestTrait {
   private ?AssertionRecorderInterface $recorder = null;
 
   /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    if ($this->getName() === [self::class, 'testLeftoverRecordedFiles'][1]) {
+      // If this is a functional test with costly setup operations, then these
+      // operations can be skipped when testing for leftover recorded files.
+      return;
+    }
+    parent::setUp();
+  }
+
+  /**
    * Verifies that no left-over recording files exist.
    *
    * This could happen if a test method was removed or renamed, or a data
