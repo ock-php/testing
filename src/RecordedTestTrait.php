@@ -186,7 +186,8 @@ trait RecordedTestTrait {
     if (\str_starts_with($relativeClassName, $tns)) {
       $relativeClassName = \substr($relativeClassName, \strlen($tns));
     }
-    $base = $nsdir->getPackageDirectory(level: 3) . '/recordings/' . $relativeClassName . '-';
+    $relativeClassPath = \str_replace('\\', '/', $relativeClassName);
+    $base = $nsdir->getPackageDirectory(level: 3) . '/recordings/' . $relativeClassPath . '-';
     return new AssertionValueStore_Yaml(
       $base,
       $this->buildYamlHeader(...),
