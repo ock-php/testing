@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Ock\Testing;
 
-use Ock\ClassDiscovery\NamespaceDirectory;
 use Ock\Testing\Exporter\Exporter_ToYamlArray;
 use Ock\Testing\Exporter\ExporterInterface;
 use Ock\Testing\Recorder\AssertionRecorder_RecordingMode;
@@ -179,15 +178,15 @@ trait RecordedTestTrait {
    * Creates a storage for the assertion recorder.
    */
   protected function createAssertionStore(): AssertionValueStoreInterface {
-    $nsdir = NamespaceDirectory::fromKnownClass(static::class)
-      ->package(3);
-    $tns = $nsdir->getTerminatedNamespace();
-    $relativeClassName = static::class;
-    if (\str_starts_with($relativeClassName, $tns)) {
-      $relativeClassName = \substr($relativeClassName, \strlen($tns));
-    }
-    $relativeClassPath = \str_replace('\\', '/', $relativeClassName);
-    $base = $nsdir->getPackageDirectory(level: 3) . '/recordings/' . $relativeClassPath . '-';
+    $reflection_class = new \ReflectionClass(static::class);
+    $class_file = $reflection_class->getFileName();
+    $parts = \explode('\\', static::class);
+    $package_dir = dirname($class_file, count($parts) - 2);
+    $base = implode('/', [
+      $package_dir,
+      'recordings',
+      ...array_slice($parts, 3),
+    ]) . '-';
     return new AssertionValueStore_Yaml(
       $base,
       $this->buildYamlHeader(...),
