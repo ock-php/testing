@@ -209,9 +209,6 @@ trait RecordedTestTrait {
     if ($dataName !== '') {
       $header['dataset name'] = $dataName;
     }
-    if ($args !== []) {
-      $header['arguments'] = $this->exportForYaml($args);
-    }
     return $header;
   }
 
