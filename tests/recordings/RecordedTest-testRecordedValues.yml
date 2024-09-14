@@ -13,8 +13,8 @@ values:
       class: stdClass
   -
     'anonymous class':
-      class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:**"
+      class: 'class@anonymous:<root>/packages/testing/tests/src/RecordedTest.php::**'
   -
     'anonymous class with property':
-      class: "class@anonymous\0/var/www/html/packages/testing/tests/src/RecordedTest.php:**"
+      class: 'class@anonymous:<root>/packages/testing/tests/src/RecordedTest.php::**'
       $x: 5

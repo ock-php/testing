@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ock\Testing\Exporter;
 
 use Ock\ClassDiscovery\Reflection\ClassReflection;
+use function Ock\Helpers\project_root_path;
 
 /**
  * Exports as array suitable for a yaml file.
@@ -181,10 +182,13 @@ class Exporter_ToYamlArray implements ExporterInterface {
     $reflectionClass = new \ReflectionClass($object);
     $classNameExport = $reflectionClass->getName();
     if ($reflectionClass->isAnonymous()) {
-      if (\preg_match('#^(class@anonymous\\0/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
+      if (\preg_match('#^class@anonymous\\0(/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
+        $path = $matches[1];
+        // @todo Inject project root path from outside.
+        $path = preg_replace('#^' . preg_quote(project_root_path(), '#') . '#', '<root>', $path);
         // Replace the line number and the hash-like suffix.
         // This will make the asserted value more stable.
-        $classNameExport = $matches[1] . '**';
+        $classNameExport = 'class@anonymous:' . $path . ':**';
       }
     }
     $export = ['class' => $classNameExport];
