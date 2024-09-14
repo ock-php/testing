@@ -185,7 +185,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       if (\preg_match('#^class@anonymous\\0(/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
         $path = $matches[1];
         // @todo Inject project root path from outside.
-        $path = preg_replace('#^' . preg_quote(project_root_path(), '#') . '#', '<root>', $path);
+        $path = $this->stabilizePath($path);
         // Replace the line number and the hash-like suffix.
         // This will make the asserted value more stable.
         $classNameExport = 'class@anonymous:' . $path . ':**';
@@ -203,6 +203,55 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $export += $this->exportObjectGetterValues($object, $depth - 1);
     }
     return $export;
+  }
+
+  /**
+   * Stabilizes a path for use in a test recording.
+   *
+   * The goal is that a test should have the same recorded data no matter how it
+   * is run.
+   *
+   * @param string $path
+   *   Original path.
+   *
+   * @return string
+   *   Stabilized string that represents the path.
+   */
+  protected function stabilizePath(string $path): string {
+    if (!str_starts_with($path, '/')
+      || substr_count($path, '/') < 3
+    ) {
+      return $path;
+    }
+    if (str_ends_with($path, '/')) {
+      $suffix = '/';
+      $base = substr($path, 0, -1);
+    }
+    elseif (!is_dir($path)) {
+      $suffix = '/' . basename($path);
+      $base = dirname($path);
+    }
+    else {
+      $suffix = '';
+      $base = $path;
+    }
+    while (TRUE) {
+      if ($base === '/') {
+        return $path;
+      }
+      if (file_exists($base . '/composer.json')) {
+        $package_name = json_decode(file_get_contents($base . '/composer.json'), TRUE)['name'];
+        return "[$package_name]$suffix";
+      }
+      $suffix = '/' . basename($base) . $suffix;
+      $base = dirname($base);
+    }
+  }
+
+  function foo(): bool {
+    while (TRUE) {
+      return TRUE;
+    }
   }
 
   /**
