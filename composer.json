@@ -1,5 +1,5 @@
 {
-    "name": "ock/class-discovery",
+    "name": "ock/testing",
     "license": "MIT",
     "authors": [
         {
@@ -15,7 +15,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Ock\\Testing\\Tests": "tests/src"
+            "Ock\\Testing\\Tests\\": "tests/src"
         }
     },
     "require": {
