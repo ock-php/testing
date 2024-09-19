@@ -90,9 +90,16 @@ trait RecordedTestTrait {
   /**
    * Asserts that an array of objects is as recorded.
    *
-   * @param object[] $objects
+   * The method helps to remove default values from object exports, and make the
+   * recording less verbose and repetitive.
+   *
+   * @param mixed[] $objects
+   *   Array of objects or other values.
+   *   Only objects are treated with the noise removal.
    * @param string|null $label
+   *   Label to include in the recording for this item, e.g. as a yaml key.
    * @param int $depth
+   *   How deep into the object to go.
    * @param string|null $defaultClass
    *   Omit the 'class' if identical to the default class.
    * @param bool $arrayKeyIsDefaultClass
