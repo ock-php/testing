@@ -64,6 +64,7 @@ class AssertionValueStore_Yaml implements AssertionValueStoreInterface {
     Assert::assertArrayHasKey('values', $yaml_data);
     Assert::assertIsArray($yaml_data['values']);
     Assert::assertNotEmpty($yaml_data['values'], 'The list of recorded values is empty. The file should not exist.');
+    Assert::assertTrue(array_is_list($yaml_data['values']));
     return $yaml_data['values'];
   }
 
@@ -72,6 +73,9 @@ class AssertionValueStore_Yaml implements AssertionValueStoreInterface {
    */
   public function getStoredNames(): array {
     $files = \glob($this->basePath . '*.yml');
+    if ($files === false) {
+      throw new \RuntimeException("Failed to glob('{$this->basePath}*.yml').");
+    }
     $regex = sprintf('#^%s([\w\-]*)\.yml$#', \preg_quote($this->basePath, '#'));
     $names = [];
     foreach ($files as $file) {

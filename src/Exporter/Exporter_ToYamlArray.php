@@ -36,6 +36,8 @@ class Exporter_ToYamlArray implements ExporterInterface {
    */
   public function withDedicatedExporter(string $class, \Closure $exporter): static {
     $clone = clone $this;
+    // Pretend that the first parameter of $exporter allows any object.
+    /** @var \Closure(object, int, string|int|null, self): mixed $exporter */
     $clone->exportersByClass[$class] = $exporter;
     return $clone;
   }
@@ -249,7 +251,12 @@ class Exporter_ToYamlArray implements ExporterInterface {
         return $path;
       }
       if (file_exists($base . '/composer.json')) {
-        $package_name = json_decode(file_get_contents($base . '/composer.json'), TRUE)['name'];
+        $json = file_get_contents($base . '/composer.json');
+        // We know at this point that composer.json exists, and we assume it is
+        // readable. So we expect that file_get_contents() does not return
+        // false.
+        assert($json !== false, "Failed to read '$base/composer.json'.");
+        $package_name = json_decode($json, TRUE)['name'];
         return "[$package_name]$suffix";
       }
       $suffix = '/' . basename($base) . $suffix;
