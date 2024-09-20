@@ -248,12 +248,6 @@ class Exporter_ToYamlArray implements ExporterInterface {
     }
   }
 
-  function foo(): bool {
-    while (TRUE) {
-      return TRUE;
-    }
-  }
-
   /**
    * @param object $object
    * @param int $depth
