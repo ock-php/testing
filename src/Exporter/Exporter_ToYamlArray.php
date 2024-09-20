@@ -246,7 +246,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $suffix = '';
       $base = $path;
     }
-    while (TRUE) {
+    while (true) {
       if ($base === '/') {
         return $path;
       }
@@ -256,7 +256,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
         // readable. So we expect that file_get_contents() does not return
         // false.
         assert($json !== false, "Failed to read '$base/composer.json'.");
-        $package_name = json_decode($json, TRUE)['name'];
+        $package_name = json_decode($json, true)['name'];
         return "[$package_name]$suffix";
       }
       $suffix = '/' . basename($base) . $suffix;
