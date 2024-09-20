@@ -322,7 +322,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
   protected static function arrayDiffAssocStrict(array $a, array $b): array {
     $diff = \array_filter(
       $a,
-      fn (mixed $v, string|int|null $k) => !\array_key_exists($k, $b)
+      fn (mixed $v, string|int $k) => !\array_key_exists($k, $b)
         || $v !== $b[$k],
       \ARRAY_FILTER_USE_BOTH,
     );
