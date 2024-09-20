@@ -87,6 +87,8 @@ class Exporter_ToYamlArray implements ExporterInterface {
     ) use ($reference, $decorated): array {
       $compare_export = $decorated($reference, $depth, $key, $exporter);
       $export = $decorated($object, $depth, $key, $exporter);
+      assert(is_array($export));
+      assert(is_array($compare_export));
       unset($compare_export['class']);
       return static::arrayDiffAssocStrict($export, $compare_export);
     });
@@ -116,6 +118,8 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $reference = $factory($key);
       $compare_export = $decorated($reference, $depth, $key, $exporter);
       $export = $decorated($object, $depth, $key, $exporter);
+      assert(is_array($export));
+      assert(is_array($compare_export));
       unset($compare_export['class']);
       return static::arrayDiffAssocStrict($export, $compare_export);
     });
@@ -171,9 +175,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @param int $depth
    * @param int|string|null $key
    *
-   * @return array
+   * @return mixed
    */
-  protected function exportObject(object $object, int $depth, int|string|null $key = null): array {
+  protected function exportObject(object $object, int $depth, int|string|null $key = null): mixed {
     foreach ($this->exportersByClass as $class => $callback) {
       if ($object instanceof $class) {
         return $callback($object, $depth, $key, $this);
@@ -250,13 +254,15 @@ class Exporter_ToYamlArray implements ExporterInterface {
       if ($base === '/') {
         return $path;
       }
-      if (file_exists($base . '/composer.json')) {
+      if (file_exists($base . '/composer.json') && is_readable($base . '/composer.json')) {
         $json = file_get_contents($base . '/composer.json');
         // We know at this point that composer.json exists, and we assume it is
         // readable. So we expect that file_get_contents() does not return
         // false.
         assert($json !== false, "Failed to read '$base/composer.json'.");
-        $package_name = json_decode($json, true)['name'];
+        // @phpstan-ignore offsetAccess.nonOffsetAccessible
+        $package_name = json_decode($json, true)['name'] ?? NULL;
+        assert(is_string($package_name));
         return "[$package_name]$suffix";
       }
       $suffix = '/' . basename($base) . $suffix;
