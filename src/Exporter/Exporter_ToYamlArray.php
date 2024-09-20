@@ -12,7 +12,17 @@ use Ock\ClassDiscovery\Reflection\ClassReflection;
 class Exporter_ToYamlArray implements ExporterInterface {
 
   /**
-   * @var array<class-string, \Closure(never&object, int, string|int|null, self): mixed>
+   * Dedicated exporters by class name.
+   *
+   * The first parameter will accept instances of the class from the respective
+   * array key.
+   * The correct parameter type to specify here would be 'never', following the
+   * idea of contravariance.
+   * However, this would not take us very far with PhpStan.
+   * For practical reasons, we pretend that all the callbacks accept any object
+   * as first parameter.
+   *
+   * @var array<class-string, \Closure(object, int, string|int|null, self): mixed>
    */
   private array $exportersByClass = [];
 
