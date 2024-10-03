@@ -74,7 +74,7 @@ trait RecordedTestTrait {
       }
     }
     $leftover_names = array_diff($stored_names, $expected_names);
-    Assert::assertEmpty($leftover_names);
+    Assert::assertSame([], $leftover_names);
   }
 
   /**
