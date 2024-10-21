@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ock\Testing\Recorder;
 
 use PHPUnit\Framework\Assert;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Assertion recorder used in regular mode.
@@ -32,7 +33,13 @@ class AssertionRecorder_ReplayMode implements AssertionRecorderInterface {
     Assert::assertArrayHasKey($this->recordingIndex, $this->expected, 'Unexpected assertion.');
     $expected = $this->expected[$this->recordingIndex];
     ++$this->recordingIndex;
-    Assert::assertSame($expected, $actual);
+    Assert::assertSame(
+      // Use yaml to avoid diff noise from array keys in lists.
+      // Prepend a line break so that the starting quote will be on a new line.
+      // The end quote will already be a new line.
+      "\n" . Yaml::dump($expected, 99, 2),
+      "\n" . Yaml::dump($actual, 99, 2),
+    );
   }
 
   /**
