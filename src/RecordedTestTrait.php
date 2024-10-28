@@ -217,7 +217,6 @@ trait RecordedTestTrait {
    * @return array
    */
   protected function buildYamlHeader(): array {
-    $args = $this->getProvidedData();
     $header = [
       'test' => static::class . '::' . $this->getName(false) . '()',
     ];
