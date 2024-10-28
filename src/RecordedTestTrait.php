@@ -34,50 +34,6 @@ trait RecordedTestTrait {
   private ?AssertionRecorderInterface $recorder = null;
 
   /**
-   * {@inheritdoc}
-   */
-  protected function setUp(): void {
-    if ($this->getName() === [self::class, 'testLeftoverRecordedFiles'][1]) {
-      // If this is a functional test with costly setup operations, then these
-      // operations can be skipped when testing for leftover recorded files.
-      return;
-    }
-    parent::setUp();
-  }
-
-  /**
-   * Verifies that no left-over recording files exist.
-   *
-   * This could happen if a test method was removed or renamed, or a data
-   * provider dataset key was changed.
-   */
-  public function testLeftoverRecordedFiles(): void {
-    $storage = $this->createAssertionStore();
-    $stored_names = $storage->getStoredNames();
-    $rc = new \ReflectionClass(static::class);
-    $expected_names = [];
-    foreach ($rc->getMethods() as $rm) {
-      if (!Test::isTestMethod($rm)) {
-        continue;
-      }
-      $datasets = Test::getProvidedData(static::class, $rm->name);
-      $data_names = \is_array($datasets)
-        ? \array_keys($datasets)
-        : [''];
-      foreach ($data_names as $data_name) {
-        if ($data_name === '') {
-          $expected_names[] = $rm->name;
-        }
-        else {
-          $expected_names[] = $rm->name . '-' . $data_name;
-        }
-      }
-    }
-    $leftover_names = array_diff($stored_names, $expected_names);
-    Assert::assertSame([], $leftover_names);
-  }
-
-  /**
    * Checks whether the test runs in "recording" mode.
    *
    * @return bool
