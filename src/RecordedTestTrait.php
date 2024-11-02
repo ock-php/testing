@@ -106,7 +106,7 @@ trait RecordedTestTrait {
    * @after
    */
   public function tearDownRecorder(): void {
-    if (!$this->hasFailed()) {
+    if ($this->status()->isSuccess()) {
       $this->recorder ??= $this->createRecorder();
       $this->recorder->assertEnd();
     }
@@ -118,8 +118,8 @@ trait RecordedTestTrait {
    * This can be overridden in test classes, if needed.
    */
   protected function createRecorder(): AssertionRecorderInterface {
-    $name = $this->getName(false);
-    $dataName = $this->dataName() ?? '';
+    $name = $this->name();
+    $dataName = $this->dataName();
     if ($dataName !== '') {
       $name .= '-' . $dataName;
     }
@@ -174,9 +174,9 @@ trait RecordedTestTrait {
    */
   protected function buildYamlHeader(): array {
     $header = [
-      'test' => static::class . '::' . $this->getName(false) . '()',
+      'test' => static::class . '::' . $this->name() . '()',
     ];
-    $dataName = $this->dataName() ?? '';
+    $dataName = $this->dataName();
     if ($dataName !== '') {
       $header['dataset name'] = $dataName;
     }

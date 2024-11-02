@@ -20,7 +20,7 @@ trait ExceptionSerializationTrait {
   /**
    * {@inheritdoc}
    */
-  protected function onNotSuccessfulTest(\Throwable $t): void {
+  protected function onNotSuccessfulTest(\Throwable $t): never {
     $cleaner = new ExceptionCleaner();
     $cleaner->cleanException($t);
     /* @see \PHPUnit\Framework\TestCase::onNotSuccessfulTest() */
