@@ -27,6 +27,22 @@ class Exporter_ToYamlArray implements ExporterInterface {
   private array $exportersByClass = [];
 
   /**
+   * Object paths as array keys by object hash.
+   *
+   * @var array<int, string>
+   */
+  private array $objectPaths = [];
+
+  /**
+   * Path in the tree.
+   *
+   * E.g. '[abc]->def()->xyz'.
+   *
+   * @var string
+   */
+  private string $path = '';
+
+  /**
    * @template T of object
    *
    * @param class-string<T> $class
@@ -129,7 +145,13 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * {@inheritdoc}
    */
   public function export(mixed $value, string $label = null, int $depth = 2): mixed {
-    $export = $this->exportRecursive($value, $depth);
+    // Don't pollute the main object cache in the main instance.
+    $clone = clone $this;
+    // Populate the object cache breadth-first.
+    for ($i = 0; $i < $depth; ++$i) {
+      $clone->exportRecursive($value, $i);
+    }
+    $export = $clone->exportRecursive($value, $depth);
     if ($label !== null) {
       $export = [$label => $export];
     }
@@ -156,10 +178,18 @@ class Exporter_ToYamlArray implements ExporterInterface {
           return '{...}';
         }
       }
-      return \array_map(
-        fn ($k) => $this->exportRecursive($value[$k], $depth - 1, $k),
-        \array_combine(array_keys($value), array_keys($value)),
-      );
+      $result = [];
+      foreach ($value as $k => $v) {
+        $parents = $this->path;
+        $this->path .= '[' . $k . ']';
+        try {
+          $result[$k] = $this->exportRecursive($v, $depth - 1, $k);
+        }
+        finally {
+          $this->path = $parents;
+        }
+      }
+      return $result;
     }
     if (is_object($value)) {
       return $this->exportObject($value, $depth, $key);
@@ -178,6 +208,14 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return mixed
    */
   protected function exportObject(object $object, int $depth, int|string|null $key = null): mixed {
+    $id = spl_object_id($object);
+    $known_path = $this->objectPaths[$id] ?? null;
+    if ($known_path === NULL) {
+      $this->objectPaths[$id] = $this->path;
+    }
+    elseif ($known_path !== $this->path) {
+      return ['_ref' => $known_path];
+    }
     foreach ($this->exportersByClass as $class => $callback) {
       if ($object instanceof $class) {
         return $callback($object, $depth, $key, $this);
@@ -289,7 +327,14 @@ class Exporter_ToYamlArray implements ExporterInterface {
       catch (\Throwable) {
         $propertyValue = '(not initialized)';
       }
-      $export['$' . $property->name] = $this->exportRecursive($propertyValue, $depth - 1);
+      $parents = $this->path;
+      $this->path .= '->' . $property->name;
+      try {
+        $export['$' . $property->name] = $this->exportRecursive($propertyValue, $depth - 1);
+      }
+      finally {
+        $this->path = $parents;
+      }
     }
     return $export;
   }
@@ -313,7 +358,14 @@ class Exporter_ToYamlArray implements ExporterInterface {
         continue;
       }
       $value = $object->{$method->name}();
-      $result[$method->name . '()'] = $this->exportRecursive($value, $depth - 1);
+      $parents = $this->path;
+      $this->path .= '->' . $method->name . '()';
+      try {
+        $result[$method->name . '()'] = $this->exportRecursive($value, $depth - 1);
+      }
+      finally {
+        $this->path = $parents;
+      }
     }
     \ksort($result);
     return $result;

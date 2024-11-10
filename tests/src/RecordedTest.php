@@ -24,6 +24,11 @@ class RecordedTest extends TestCase {
     $this->assertAsRecorded(new class () {
       public int $x = 5;
     }, 'anonymous class with property');
+    $object = new class () {};
+    $this->assertObjectsAsRecorded([
+      [$object],
+      $object,
+    ]);
   }
 
 }
