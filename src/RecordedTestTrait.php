@@ -66,7 +66,7 @@ trait RecordedTestTrait {
   protected function assertObjectsAsRecorded(
     array $objects,
     string $label = null,
-    int $depth = 2,
+    int $depth = 15,
     string $defaultClass = null,
     bool $arrayKeyIsDefaultClass = false,
     string $arrayKeyIsDefaultFor = null,
@@ -96,7 +96,7 @@ trait RecordedTestTrait {
    * @param int $depth
    *   Depth for yaml export.
    */
-  public function assertAsRecorded(mixed $actual, string $label = null, int $depth = 2): void {
+  public function assertAsRecorded(mixed $actual, string $label = null, int $depth = 9): void {
     $actual = $this->exportForYaml($actual, $label, $depth);
     $this->recorder ??= $this->createRecorder();
     $this->recorder->assertValue($actual);
