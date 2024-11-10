@@ -71,7 +71,7 @@ trait RecordedTestTrait {
     bool $arrayKeyIsDefaultClass = false,
     string $arrayKeyIsDefaultFor = null,
   ): void {
-    $export = $this->exportForYaml($objects, depth: $depth);
+    $export = $this->exportForYaml($objects, null, $depth);
     \assert(is_array($export));
     foreach ($export as $key => $item) {
       if (($item['class'] ?? false) === $defaultClass
@@ -196,7 +196,7 @@ trait RecordedTestTrait {
    *   Exported value.
    *   This won't contain any objects.
    */
-  protected function exportForYaml(mixed $value, string $label = null, int $depth = 2): mixed {
+  protected function exportForYaml(mixed $value, string|null $label, int $depth): mixed {
     return $this->createExporter()->export($value, $label, $depth);
   }
 

@@ -149,9 +149,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
     $clone = clone $this;
     // Populate the object cache breadth-first.
     for ($i = 0; $i < $depth; ++$i) {
-      $clone->exportRecursive($value, $i);
+      $clone->exportRecursive($value, $i, null);
     }
-    $export = $clone->exportRecursive($value, $depth);
+    $export = $clone->exportRecursive($value, $depth, null);
     if ($label !== null) {
       $export = [$label => $export];
     }
@@ -165,7 +165,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
    *
    * @return mixed
    */
-  protected function exportRecursive(mixed $value, int $depth = 2, string|int|null $key = null): mixed {
+  protected function exportRecursive(mixed $value, int $depth, string|int|null $key): mixed {
     if (\is_array($value)) {
       if ($value === []) {
         return [];
@@ -330,7 +330,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $parents = $this->path;
       $this->path .= '->' . $property->name;
       try {
-        $export['$' . $property->name] = $this->exportRecursive($propertyValue, $depth - 1);
+        $export['$' . $property->name] = $this->exportRecursive($propertyValue, $depth - 1, null);
       }
       finally {
         $this->path = $parents;
@@ -361,7 +361,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $parents = $this->path;
       $this->path .= '->' . $method->name . '()';
       try {
-        $result[$method->name . '()'] = $this->exportRecursive($value, $depth - 1);
+        $result[$method->name . '()'] = $this->exportRecursive($value, $depth - 1, null);
       }
       finally {
         $this->path = $parents;
