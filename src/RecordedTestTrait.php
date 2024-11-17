@@ -30,17 +30,9 @@ use PHPUnit\Framework\Attributes\After;
  */
 trait RecordedTestTrait {
 
-  private ?AssertionRecorderInterface $recorder = null;
+  use IsRecordingTrait;
 
-  /**
-   * Checks whether the test runs in "recording" mode.
-   *
-   * @return bool
-   *   TRUE if the test runs in "recording" mode.
-   */
-  protected function isRecording(): bool {
-    return !!\getenv('UPDATE_TESTS');
-  }
+  private ?AssertionRecorderInterface $recorder = null;
 
   /**
    * Asserts that an array of objects is as recorded.
