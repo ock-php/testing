@@ -1,0 +1,71 @@
+before:
+  -
+    - addConverter
+    -
+      - '@drupal.proxy_original_service.paramconverter.menu_link'
+      - drupal.proxy_original_service.paramconverter.menu_link
+after:
+  -
+    - addConverter
+    -
+      -
+        class: Symfony\Component\DependencyInjection\Definition
+        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Iface
+        getTags():
+          paramconverter:
+            - {  }
+      - Drupal\ock\UI\ParamConverter\ParamConverter_Iface
+  -
+    - addConverter
+    -
+      -
+        class: Symfony\Component\DependencyInjection\Definition
+        getArguments():
+          - '@Ock\Ock\Plugin\Map\PluginMapInterface'
+          -
+            class: Symfony\Component\DependencyInjection\TypedReference
+            $type: Psr\Log\LoggerInterface
+            $attributes:
+              -
+                class: Symfony\Component\DependencyInjection\Attribute\Autowire
+                $value: '@logger.channel.ock'
+        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
+        getTags():
+          paramconverter:
+            - {  }
+      - Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
+  -
+    - addConverter
+    -
+      - '@drupal.proxy_original_service.paramconverter.menu_link'
+      - drupal.proxy_original_service.paramconverter.menu_link
+diff:
+  - !add
+    - addConverter
+    -
+      -
+        class: Symfony\Component\DependencyInjection\Definition
+        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Iface
+        getTags():
+          paramconverter:
+            - {  }
+      - Drupal\ock\UI\ParamConverter\ParamConverter_Iface
+  - !add
+    - addConverter
+    -
+      -
+        class: Symfony\Component\DependencyInjection\Definition
+        getArguments():
+          - '@Ock\Ock\Plugin\Map\PluginMapInterface'
+          -
+            class: Symfony\Component\DependencyInjection\TypedReference
+            $type: Psr\Log\LoggerInterface
+            $attributes:
+              -
+                class: Symfony\Component\DependencyInjection\Attribute\Autowire
+                $value: '@logger.channel.ock'
+        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
+        getTags():
+          paramconverter:
+            - {  }
+      - Drupal\ock\UI\ParamConverter\ParamConverter_Plugin

@@ -1,0 +1,28 @@
+before:
+  - before
+  -
+    a: 'A orig'
+    b: 'B orig'
+  -
+    a: 'A orig'
+    b: 'B orig'
+  - after
+after:
+  - before
+  -
+    a: 'A changed'
+    b: 'B changed'
+  -
+    a: 'A changed'
+    b: 'B orig'
+  - after
+diff:
+  - !--
+    a: 'A orig'
+    b: 'B orig'
+  - !add
+    a: 'A changed'
+    b: 'B changed'
+  - !diff
+    '~- a': 'A orig'
+    '~+ a': 'A changed'

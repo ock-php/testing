@@ -1,0 +1,9 @@
+before:
+  - hello
+  - world
+after:
+  - goodbye
+  - world
+diff:
+  - !-- hello
+  - !add goodbye
