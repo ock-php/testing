@@ -43,6 +43,13 @@ class Exporter_ToYamlArray implements ExporterInterface {
   private string $path = '';
 
   /**
+   * Default objects, to reduce redundancy of the export.
+   *
+   * @var array<class-string, object|false>
+   */
+  private array $defaultObjects = [];
+
+  /**
    * @template T of object
    *
    * @param class-string<T> $class
@@ -218,7 +225,14 @@ class Exporter_ToYamlArray implements ExporterInterface {
         return $callback($object, $depth, $key, $this);
       }
     }
-    return $this->doExportObject($object, $depth);
+    $export = $this->doExportObject($object, $depth);
+    $default_object = $this->getDefaultObject(get_class($object));
+    if ($default_object) {
+      $default_export = $this->doExportObject($default_object, $depth);
+      unset($default_export['class']);
+      $export = static::arrayDiffAssocStrict($export, $default_export);
+    }
+    return $export;
   }
 
   /**
@@ -253,6 +267,64 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $export += $this->exportObjectGetterValues($object, $depth - 1);
     }
     return $export;
+  }
+
+  /**
+   * @template T of object
+   *
+   * @param class-string<T> $class
+   *
+   * @return (object&T)|null
+   */
+  protected function getDefaultObject(string $class): object|null {
+    $object_or_false = $this->defaultObjects[$class]
+      ??= ($this->createDefaultObject($class) ?? false);
+    if (!$object_or_false) {
+      return NULL;
+    }
+    assert($object_or_false instanceof $class);
+    return $object_or_false;
+  }
+
+  /**
+   * @template T of object
+   *
+   * @param class-string<T> $class
+   *
+   * @return (object&T)|null
+   */
+  protected function createDefaultObject(string $class): object|null {
+    $rc = new \ReflectionClass($class);
+    $constructor = $rc->getConstructor();
+    if ($constructor && !$constructor->isPublic()) {
+      return null;
+    }
+    $args = [];
+    foreach (($constructor?->getParameters() ?? []) as $parameter) {
+      if ($parameter->isOptional()) {
+        break;
+      }
+      $type = $parameter->getType();
+      if (!$type) {
+        return null;
+      }
+      switch ($type->__toString()) {
+        case 'string':
+        case 'string|int':
+        case 'int|string':
+          $args[] = '?#?#?#*';
+          break;
+
+        default:
+          return null;
+      }
+    }
+    try {
+      return new $class(...$args);
+    }
+    catch (\Throwable) {
+      return null;
+    }
   }
 
   /**
