@@ -17,7 +17,6 @@ values:
   -
     'anonymous class with property':
       class: 'class@anonymous:[ock/testing]/tests/src/RecordedTest.php::**'
-      $x: 5
   -
     -
       -
