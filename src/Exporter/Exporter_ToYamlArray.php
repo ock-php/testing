@@ -321,10 +321,10 @@ class Exporter_ToYamlArray implements ExporterInterface {
     $properties = $reflector->getFilteredProperties(static: false, public: $public ?: null);
     $export = [];
     foreach ($properties as $property) {
-      try {
+      if ($property->isInitialized($object)) {
         $propertyValue = $property->getValue($object);
       }
-      catch (\Throwable) {
+      else {
         $propertyValue = '(not initialized)';
       }
       $parents = $this->path;
