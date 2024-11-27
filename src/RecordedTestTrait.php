@@ -11,8 +11,6 @@ use Ock\Testing\Recorder\AssertionRecorder_ReplayMode;
 use Ock\Testing\Recorder\AssertionRecorderInterface;
 use Ock\Testing\Storage\AssertionValueStore_Yaml;
 use Ock\Testing\Storage\AssertionValueStoreInterface;
-use PHPUnit\Framework\Assert;
-use PHPUnit\Util\Test;
 
 /**
  * Mechanism where expected values are pre-recorded.
