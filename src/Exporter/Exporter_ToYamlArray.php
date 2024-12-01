@@ -94,7 +94,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
    *
    * @return static
    */
-  public function withReferenceObject(object $reference, string $class = null): static {
+  public function withDefaultObject(object $reference, string $class = null): static {
     $class ??= \get_class($reference);
     $decorated = $this->exportersByClass[$class] ?? fn (
       object $object,
@@ -125,7 +125,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
    *
    * @return static
    */
-  public function withReferenceObjectFactory(string $class, \Closure $factory): static {
+  public function withDefaultObjectFactory(string $class, \Closure $factory): static {
     $decorated = $this->exportersByClass[$class] ?? fn (
       object $object,
       int $depth,
