@@ -50,6 +50,13 @@ class Exporter_ToYamlArray implements ExporterInterface {
   private array $defaultObjects = [];
 
   /**
+   * Default object factories.
+   *
+   * @var array<class-string, callable(string|int|null): (object)>
+   */
+  private array $defaultObjectFactories = [];
+
+  /**
    * @template T of object
    *
    * @param class-string<T> $class
@@ -78,7 +85,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       string|int|null $key,
       self $exporter,
     ) use ($keys_to_unset): array {
-      $export = $exporter->doExportObject($object, $depth, true);
+      $export = $exporter->doExportObject($object, $depth, $key, true);
       foreach ($keys_to_unset as $key) {
         unset($export[$key]);
       }
@@ -95,26 +102,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return static
    */
   public function withDefaultObject(object $reference, string $class = null): static {
-    $class ??= \get_class($reference);
-    $decorated = $this->exportersByClass[$class] ?? fn (
-      object $object,
-      int $depth,
-      string|int|null $key,
-      self $exporter,
-    ): array => $exporter->doExportObject($object, $depth);
-    return $this->withDedicatedExporter($class, static function (
-      object $object,
-      int $depth,
-      string|int|null $key,
-      self $exporter,
-    ) use ($reference, $decorated): array {
-      $compare_export = $decorated($reference, $depth, $key, $exporter);
-      $export = $decorated($object, $depth, $key, $exporter);
-      assert(is_array($export));
-      assert(is_array($compare_export));
-      unset($compare_export['class']);
-      return static::arrayDiffAssocStrict($export, $compare_export);
-    });
+    $clone = clone $this;
+    $clone->defaultObjects[$class ?? get_class($reference)] = $reference;
+    return $clone;
   }
 
   /**
@@ -126,26 +116,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return static
    */
   public function withDefaultObjectFactory(string $class, \Closure $factory): static {
-    $decorated = $this->exportersByClass[$class] ?? fn (
-      object $object,
-      int $depth,
-      string|int|null $key,
-      self $exporter,
-    ): array => $exporter->doExportObject($object, $depth);
-    return $this->withDedicatedExporter($class, static function(
-      object $object,
-      int $depth,
-      string|int|null $key,
-      self $exporter,
-    ) use ($factory, $decorated): array {
-      $reference = $factory($key);
-      $compare_export = $decorated($reference, $depth, $key, $exporter);
-      $export = $decorated($object, $depth, $key, $exporter);
-      assert(is_array($export));
-      assert(is_array($compare_export));
-      unset($compare_export['class']);
-      return static::arrayDiffAssocStrict($export, $compare_export);
-    });
+    $clone = clone $this;
+    $clone->defaultObjectFactories[$class] = $factory;
+    return $clone;
   }
 
   /**
@@ -225,11 +198,23 @@ class Exporter_ToYamlArray implements ExporterInterface {
         return $callback($object, $depth, $key, $this);
       }
     }
-    $export = $this->doExportObject($object, $depth);
-    $default_object = $this->getDefaultObject(get_class($object));
+    return $this->doExportObject($object, $depth, $key);
+  }
+
+  /**
+   * @param object $object
+   * @param int $depth
+   * @param int|string|null $key
+   * @param bool $getters
+   *
+   * @return array
+   */
+  protected function doExportObject(object $object, int $depth, int|string|null $key = null, bool $getters = false): array {
+    $export = ['class' => $this->exportObjectClassName($object)];
+    $export += $this->exportObjectValues($object, $depth, $getters);
+    $default_object = $this->getDefaultObject(get_class($object), $key);
     if ($default_object) {
-      $default_export = $this->doExportObject($default_object, $depth);
-      unset($default_export['class']);
+      $default_export = $this->exportObjectValues($default_object, $depth, $getters);
       $export = static::arrayDiffAssocStrict($export, $default_export);
     }
     return $export;
@@ -242,18 +227,15 @@ class Exporter_ToYamlArray implements ExporterInterface {
    *
    * @return array
    */
-  protected function doExportObject(object $object, int $depth, bool $getters = false): array {
-    $export = ['class' => $this->exportObjectClassName($object)];
+  protected function exportObjectValues(object $object, int $depth, bool $getters = false): array {
     if ($depth <= 0) {
-      return $export;
+      return [];
     }
     if (!$getters) {
-      $export += $this->exportObjectProperties($object, $depth - 1);
+      return $this->exportObjectProperties($object, $depth - 1);
     }
-    else {
-      $export += $this->exportObjectProperties($object, $depth - 1, true);
-      $export += $this->exportObjectGetterValues($object, $depth - 1);
-    }
+    $export = $this->exportObjectProperties($object, $depth - 1, true);
+    $export += $this->exportObjectGetterValues($object, $depth - 1);
     return $export;
   }
 
@@ -283,10 +265,16 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @template T of object
    *
    * @param class-string<T> $class
+   * @param int|string|null $key
    *
    * @return (object&T)|null
    */
-  protected function getDefaultObject(string $class): object|null {
+  protected function getDefaultObject(string $class, int|string|null $key): object|null {
+    if (isset($this->defaultObjectFactories[$class])) {
+      $object = ($this->defaultObjectFactories[$class])($key);
+      assert($object instanceof $class);
+      return $object;
+    }
     $object_or_false = $this->defaultObjects[$class]
       ??= ($this->createDefaultObject($class) ?? false);
     if (!$object_or_false) {
