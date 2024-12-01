@@ -60,7 +60,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @template T of object
    *
    * @param class-string<T> $class
-   * @param \Closure(T, int, string|int|null, self): mixed $exporter
+   * @param \Closure(T, int, string|int|null, self): (mixed|null) $exporter
+   *   Dedicated export function for objects of the provided class.
+   *   If that function returns NULL, the regular exporter is used instead.
    *
    * @return static
    */
@@ -195,7 +197,10 @@ class Exporter_ToYamlArray implements ExporterInterface {
     }
     foreach ($this->exportersByClass as $class => $callback) {
       if ($object instanceof $class) {
-        return $callback($object, $depth, $key, $this);
+        $export = $callback($object, $depth, $key, $this);
+        if ($export !== null) {
+          return $export;
+        }
       }
     }
     return $this->doExportObject($object, $depth, $key);
