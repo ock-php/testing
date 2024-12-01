@@ -82,7 +82,10 @@ trait RecordedTestTrait {
         unset($export[$key][$arrayKeyIsDefaultFor]);
       }
     }
-    $this->assertAsRecorded($export, $label, $depth + 2);
+    if ($label !== null) {
+      $export = [$label => $export];
+    }
+    $this->assertExportedAsRecorded($export);
   }
 
   /**
@@ -97,6 +100,17 @@ trait RecordedTestTrait {
    */
   public function assertAsRecorded(mixed $actual, string $label = null, int $depth = 9): void {
     $actual = $this->exportForYaml($actual, $label, $depth);
+    $this->assertExportedAsRecorded($actual);
+  }
+
+  /**
+   * Asserts that an exported value is the same as previously recorded.
+   *
+   * @param mixed $actual
+   *   The exported actual value to compare.
+   *   This should be prepared to export to yaml.
+   */
+  public function assertExportedAsRecorded(mixed $actual): void {
     $this->recorder ??= $this->createRecorder();
     $this->recorder->assertValue($actual);
   }
