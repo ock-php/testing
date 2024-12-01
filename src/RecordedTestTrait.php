@@ -194,7 +194,11 @@ trait RecordedTestTrait {
    *   This won't contain any objects.
    */
   protected function exportForYaml(mixed $value, string|null $label, int $depth): mixed {
-    return $this->createExporter()->export($value, $label, $depth);
+    $export = $this->createExporter()->export($value, $depth);
+    if ($label !== null) {
+      $export = [$label => $export];
+    }
+    return $export;
   }
 
   /**

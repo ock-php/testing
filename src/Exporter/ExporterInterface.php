@@ -20,8 +20,6 @@ interface ExporterInterface {
    * Exports values for yaml.
    *
    * @param mixed $value
-   * @param string|null $label
-   *   Label to add to the value.
    * @param int $depth
    *   Maximum depth for recursive export.
    *
@@ -29,6 +27,6 @@ interface ExporterInterface {
    *   Exported value.
    *   This won't contain any objects.
    */
-  public function export(mixed $value, string $label = null, int $depth = 2): mixed;
+  public function export(mixed $value, int $depth = 2): mixed;
 
 }
