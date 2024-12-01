@@ -243,19 +243,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return array
    */
   protected function doExportObject(object $object, int $depth, bool $getters = false): array {
-    $reflectionClass = new \ReflectionClass($object);
-    $classNameExport = $reflectionClass->getName();
-    if ($reflectionClass->isAnonymous()) {
-      if (\preg_match('#^class@anonymous\\0(/[^:]+:)\d+\$[0-9a-f]+$#', $classNameExport, $matches)) {
-        $path = $matches[1];
-        // @todo Inject project root path from outside.
-        $path = $this->stabilizePath($path);
-        // Replace the line number and the hash-like suffix.
-        // This will make the asserted value more stable.
-        $classNameExport = 'class@anonymous:' . $path . ':**';
-      }
-    }
-    $export = ['class' => $classNameExport];
+    $export = ['class' => $this->exportObjectClassName($object)];
     if ($depth <= 0) {
       return $export;
     }
@@ -267,6 +255,28 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $export += $this->exportObjectGetterValues($object, $depth - 1);
     }
     return $export;
+  }
+
+  /**
+   * Exports the object's class name.
+   *
+   * @param object $object
+   *
+   * @return string
+   */
+  protected function exportObjectClassName(object $object): string {
+    $reflectionClass = new \ReflectionClass($object);
+    if ($reflectionClass->isAnonymous()) {
+      if (\preg_match('#^class@anonymous\\0(/[^:]+:)\d+\$[0-9a-f]+$#', $reflectionClass->getName(), $matches)) {
+        $path = $matches[1];
+        // @todo Inject project root path from outside.
+        $path = $this->stabilizePath($path);
+        // Replace the line number and the hash-like suffix.
+        // This will make the asserted value more stable.
+        return 'class@anonymous:' . $path . ':**';
+      }
+    }
+    return $reflectionClass->getName();
   }
 
   /**
