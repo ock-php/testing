@@ -11,6 +11,7 @@ use Ock\Testing\Recorder\AssertionRecorder_ReplayMode;
 use Ock\Testing\Recorder\AssertionRecorderInterface;
 use Ock\Testing\Storage\AssertionValueStore_Yaml;
 use Ock\Testing\Storage\AssertionValueStoreInterface;
+use PHPUnit\Framework\Attributes\After;
 
 /**
  * Mechanism where expected values are pre-recorded.
@@ -100,9 +101,7 @@ trait RecordedTestTrait {
     $this->recorder->assertValue($actual);
   }
 
-  /**
-   * @after
-   */
+  #[After]
   public function tearDownRecorder(): void {
     if ($this->status()->isSuccess()) {
       $this->recorder ??= $this->createRecorder();
