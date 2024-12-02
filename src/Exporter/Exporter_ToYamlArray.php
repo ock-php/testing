@@ -343,9 +343,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @param object $object
    * @param int $depth
    *
-   * @return array|string
+   * @return array<string, mixed>
    */
-  protected function exportObjectGetterValues(object $object, int $depth): array|string {
+  protected function exportObjectGetterValues(object $object, int $depth): array {
     $reflector = new ClassReflection($object);
     $result = [];
     foreach ($reflector->getFilteredMethods(static: false, public: true, constructor: false) as $method) {
