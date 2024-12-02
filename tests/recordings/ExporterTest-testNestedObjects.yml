@@ -1,0 +1,13 @@
+test: 'Ock\Testing\Tests\ExporterTest::testNestedObjects()'
+values:
+  -
+    -
+      class: Ock\Testing\Tests\Fixtures\ExampleObject
+      $var:
+        class: Ock\Testing\Tests\Fixtures\ExampleObject
+        $var: 5
+    -
+      class: Ock\Testing\Tests\Fixtures\ClassWithDefaultObject
+      $var:
+        class: Ock\Testing\Tests\Fixtures\ExampleObject
+        $var: 5
