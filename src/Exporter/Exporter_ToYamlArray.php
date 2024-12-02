@@ -27,11 +27,18 @@ class Exporter_ToYamlArray implements ExporterInterface {
   private array $exportersByClass = [];
 
   /**
-   * Object paths as array keys by object hash.
+   * Objects to export later.
    *
-   * @var array<int, string>
+   * @var array<int, object>
    */
-  private array $objectPaths = [];
+  private array $objects = [];
+
+  /**
+   * Object occurences by object id and depth.
+   *
+   * @var array<int, array<int, list<array{key: int|string|null, path: string, ref: mixed}>>>
+   */
+  private array $objectOccurences = [];
 
   /**
    * Path in the tree.
@@ -128,12 +135,51 @@ class Exporter_ToYamlArray implements ExporterInterface {
    */
   public function export(mixed $value, int $depth = 2): mixed {
     // Don't pollute the main object cache in the main instance.
-    $clone = clone $this;
+    return (clone $this)->doExport($value, $depth);
+  }
+
+  /**
+   * @param mixed $value
+   * @param int $depth
+   *
+   * @return mixed
+   */
+  public function doExport(mixed $value, int $depth): mixed {
     // Populate the object cache breadth-first.
-    for ($i = 0; $i < $depth; ++$i) {
-      $clone->exportRecursive($value, $i, null);
+    $export =& $this->exportRecursive($value, $depth, null);
+
+    $canonical_object_paths = [];
+    while ($objects = $this->objects) {
+      $this->objects = [];
+      foreach ($objects as $id => $object) {
+        if (isset($canonical_object_paths[$id])) {
+          continue;
+        }
+        $object_best_depth = max(array_keys($this->objectOccurences[$id]));
+        $object_best_occurence = array_shift($this->objectOccurences[$id][$object_best_depth]);
+        assert($object_best_occurence !== null);
+        // Overwrite the reference.
+        try {
+          $original_path = $this->path;
+          $this->path = $object_best_occurence['path'];
+          $object_best_occurence['ref'] = $this->exportObject($object, $object_best_depth, $object_best_occurence['key']);
+        }
+        finally {
+          $this->path = $original_path;
+        }
+        $canonical_object_paths[$id] = $object_best_occurence['path'];
+      }
     }
-    $export = $clone->exportRecursive($value, $depth, null);
+
+    foreach ($this->objectOccurences as $id => $occurences_by_depth) {
+      foreach ($occurences_by_depth as $occurences) {
+        foreach ($occurences as $occurence) {
+          // Overwrite the reference.
+          $occurence['ref'] = ['_ref' => $canonical_object_paths[$id]];
+        }
+      }
+    }
+
     return $export;
   }
 
@@ -144,39 +190,70 @@ class Exporter_ToYamlArray implements ExporterInterface {
    *
    * @return mixed
    */
-  protected function exportRecursive(mixed $value, int $depth, string|int|null $key): mixed {
-    if (\is_array($value)) {
-      if ($value === []) {
-        return [];
-      }
-      if ($depth <= 0) {
-        if (array_is_list($value)) {
-          return '[...]';
-        }
-        else {
-          return '{...}';
-        }
-      }
+  protected function &exportRecursive(mixed $value, int $depth, string|int|null $key): mixed {
+    if (is_array($value)) {
+      $result = $this->exportArrayRecursive($value, $depth);
+    }
+    elseif (is_object($value)) {
+      $result =& $this->registerObject($value, $depth, $key);
+    }
+    elseif (\is_resource($value)) {
+      $result = 'resource';
+    }
+    else {
+      $result = $value;
+    }
+
+    return $result;
+  }
+
+  /**
+   * @param array $value
+   * @param int $depth
+   *
+   * @return mixed
+   */
+  protected function exportArrayRecursive(array $value, int $depth): mixed {
+    if ($value === []) {
       $result = [];
-      foreach ($value as $k => $v) {
-        $parents = $this->path;
-        $this->path .= '[' . $k . ']';
-        try {
-          $result[$k] = $this->exportRecursive($v, $depth - 1, $k);
-        }
-        finally {
-          $this->path = $parents;
-        }
+      return $result;
+    }
+    if ($depth <= 0) {
+      if (array_is_list($value)) {
+        $result = '[...]';
+      }
+      else {
+        $result = '{...}';
       }
       return $result;
     }
-    if (is_object($value)) {
-      return $this->exportObject($value, $depth, $key);
+    $result = [];
+    foreach ($value as $k => $v) {
+      $parents = $this->path;
+      $this->path .= '[' . $k . ']';
+      try {
+        $result[$k] =& $this->exportRecursive($v, $depth - 1, $k);
+      }
+      finally {
+        $this->path = $parents;
+      }
     }
-    if (\is_resource($value)) {
-      return 'resource';
-    }
-    return $value;
+    return $result;
+  }
+
+  /**
+   * @param object $object
+   * @param int $depth
+   * @param string|int|null $key
+   *
+   * @return int
+   */
+  protected function &registerObject(object $object, int $depth, string|int|null $key): int {
+    $id = spl_object_id($object);
+    $this->objects[$id] = $object;
+    $ref = $id;
+    $this->objectOccurences[$id][$depth][] = ['key' => $key, 'path' => $this->path, 'ref' => &$ref];
+    return $ref;
   }
 
   /**
@@ -187,14 +264,6 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return mixed
    */
   protected function exportObject(object $object, int $depth, int|string|null $key = null): mixed {
-    $id = spl_object_id($object);
-    $known_path = $this->objectPaths[$id] ?? null;
-    if ($known_path === NULL) {
-      $this->objectPaths[$id] = $this->path;
-    }
-    elseif ($known_path !== $this->path) {
-      return ['_ref' => $known_path];
-    }
     foreach ($this->exportersByClass as $class => $callback) {
       if ($object instanceof $class) {
         $export = $callback($object, $depth, $key, $this);
@@ -402,7 +471,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $parents = $this->path;
       $this->path .= '->' . $property->name;
       try {
-        $export['$' . $property->name] = $this->exportRecursive($propertyValue, $depth - 1, null);
+        $export['$' . $property->name] =& $this->exportRecursive($propertyValue, $depth - 1, null);
       }
       finally {
         $this->path = $parents;
@@ -433,7 +502,7 @@ class Exporter_ToYamlArray implements ExporterInterface {
       $parents = $this->path;
       $this->path .= '->' . $method->name . '()';
       try {
-        $result[$method->name . '()'] = $this->exportRecursive($value, $depth - 1, null);
+        $result[$method->name . '()'] =& $this->exportRecursive($value, $depth - 1, null);
       }
       finally {
         $this->path = $parents;
