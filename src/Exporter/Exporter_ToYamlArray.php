@@ -314,9 +314,9 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @param bool $public
    *   TRUE to only export public properties.
    *
-   * @return array|string
+   * @return array<string, mixed>
    */
-  protected function exportObjectProperties(object $object, int $depth, bool $public = false): array|string {
+  protected function exportObjectProperties(object $object, int $depth, bool $public = false): array {
     $reflector = new ClassReflection($object);
     $properties = $reflector->getFilteredProperties(static: false, public: $public ?: null);
     $export = [];
