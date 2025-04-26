@@ -64,6 +64,13 @@ class Exporter_ToYamlArray implements ExporterInterface {
   private array $defaultObjectFactories = [];
 
   /**
+   * Filters to apply to the complete result tree.
+   *
+   * @var list<callable(array, mixed): array>
+   */
+  private array $filters = [];
+
+  /**
    * @template T of object
    *
    * @param class-string<T> $class
@@ -131,11 +138,30 @@ class Exporter_ToYamlArray implements ExporterInterface {
   }
 
   /**
+   * @param callable(array, mixed): array $filter
+   *   Callback to apply to the complete result tree.
+   *   The parameters are the result tree and the original value.
+   *
+   * @return static
+   */
+  public function withResultFilter(callable $filter): static {
+    $clone = clone $this;
+    $clone->filters[] = $filter;
+    return $clone;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function export(mixed $value, int $depth = 2): mixed {
     // Don't pollute the main object cache in the main instance.
-    return (clone $this)->doExport($value, $depth);
+    $result = (clone $this)->doExport($value, $depth);
+    if (is_array($result)) {
+      foreach ($this->filters as $filter) {
+        $result = $filter($result, $value);
+      }
+    }
+    return $result;
   }
 
   /**
