@@ -4,7 +4,7 @@ declare(strict_types = 1);
 
 namespace Ock\Testing;
 
-use Ock\ClassDiscovery\NamespaceDirectory;
+use Ock\ClassFilesIterator\NamespaceDirectory;
 
 trait FixturesPathTrait {
 
