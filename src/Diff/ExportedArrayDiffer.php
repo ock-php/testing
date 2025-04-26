@@ -38,6 +38,18 @@ class ExportedArrayDiffer implements DifferInterface {
     return $diff;
   }
 
+  /**
+   * Compares two values.
+   *
+   * @param mixed $before
+   * @param mixed $after
+   * @param bool $could_be_list
+   *
+   * @return array|false
+   *   FALSE if the values are completely different.
+   *   Empty array, if the values are identical.
+   *   Otherwise, a non-empty array with diff information.
+   */
   protected function compareValues(mixed $before, mixed $after, bool $could_be_list = true): array|false {
     if ($before === $after) {
       return [];
@@ -48,6 +60,20 @@ class ExportedArrayDiffer implements DifferInterface {
     return $this->compareArrays($before, $after, $could_be_list);
   }
 
+  /**
+   * Compares two exported arrays.
+   *
+   * Note that these arrays could be the result of an object export.
+   *
+   * @param array $before
+   * @param array $after
+   * @param bool $could_be_list
+   *
+   * @return array|false
+   *   FALSE if the values are completely different or from different objects.
+   *   Empty array, if the values are identical.
+   *   Otherwise, a non-empty array with diff information.
+   */
   protected function compareArrays(array $before, array $after, bool $could_be_list = true): array|false {
     if ($could_be_list && array_is_list($before) && array_is_list($after)) {
       return $this->compareLists($before, $after);
