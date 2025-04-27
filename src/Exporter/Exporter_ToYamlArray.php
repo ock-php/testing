@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Ock\Testing\Exporter;
 
-use Ock\ClassDiscovery\Reflection\ClassReflection;
+use Ock\Reflection\ClassReflection;
 
 /**
  * Exports as array suitable for a yaml file.
