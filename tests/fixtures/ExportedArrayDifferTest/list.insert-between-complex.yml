@@ -1,71 +1,47 @@
 before:
   -
-    - addConverter
+    - str.0.0.common
     -
-      - '@drupal.proxy_original_service.paramconverter.menu_link'
-      - drupal.proxy_original_service.paramconverter.menu_link
+      - str.0.1.0
+      - str.0.1.1
 after:
   -
-    - addConverter
+    - str.0.0.common
     -
       -
-        class: Symfony\Component\DependencyInjection\Definition
-        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Iface
-        getTags():
-          paramconverter:
-            - {  }
-      - Drupal\ock\UI\ParamConverter\ParamConverter_Iface
+        a: A.NEW
+        b: B.NEW
+        c:
+          c_a: 'C.A. this is a longer string.'
+          c_b: 'C.B. This is another string.'
+      - str.NEW
   -
-    - addConverter
+    - str.0.0.common
     -
       -
-        class: Symfony\Component\DependencyInjection\Definition
-        getArguments():
-          - '@Ock\Ock\Plugin\Map\PluginMapInterface'
-          -
-            class: Symfony\Component\DependencyInjection\TypedReference
-            $type: Psr\Log\LoggerInterface
-            $attributes:
-              -
-                class: Symfony\Component\DependencyInjection\Attribute\Autowire
-                $value: '@logger.channel.ock'
-        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
-        getTags():
-          paramconverter:
-            - {  }
-      - Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
+        x: X.NEW.1
+        'y': Y.NEW.1
+      - str.NEW.1.1.1
   -
-    - addConverter
+    - str.0.0.common
     -
-      - '@drupal.proxy_original_service.paramconverter.menu_link'
-      - drupal.proxy_original_service.paramconverter.menu_link
+      - str.0.1.0
+      - str.0.1.1
 diff:
   - !add
-    - addConverter
+    - str.0.0.common
     -
       -
-        class: Symfony\Component\DependencyInjection\Definition
-        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Iface
-        getTags():
-          paramconverter:
-            - {  }
-      - Drupal\ock\UI\ParamConverter\ParamConverter_Iface
+        a: A.NEW
+        b: B.NEW
+        c:
+          c_a: 'C.A. this is a longer string.'
+          c_b: 'C.B. This is another string.'
+      - str.NEW
   - !add
-    - addConverter
+    - str.0.0.common
     -
       -
-        class: Symfony\Component\DependencyInjection\Definition
-        getArguments():
-          - '@Ock\Ock\Plugin\Map\PluginMapInterface'
-          -
-            class: Symfony\Component\DependencyInjection\TypedReference
-            $type: Psr\Log\LoggerInterface
-            $attributes:
-              -
-                class: Symfony\Component\DependencyInjection\Attribute\Autowire
-                $value: '@logger.channel.ock'
-        getClass(): Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
-        getTags():
-          paramconverter:
-            - {  }
-      - Drupal\ock\UI\ParamConverter\ParamConverter_Plugin
+        x: X.NEW.1
+        'y': Y.NEW.1
+      - str.NEW.1.1.1
