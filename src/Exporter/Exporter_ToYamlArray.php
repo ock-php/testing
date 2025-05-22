@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Ock\Testing\Exporter;
 
-use Ock\Reflection\ClassReflection;
-
 /**
  * Exports as array suitable for a yaml file.
  */
@@ -484,10 +482,13 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return array<string, mixed>
    */
   protected function exportObjectProperties(object $object, int $depth, bool $public = false): array {
-    $reflector = new ClassReflection($object);
-    $properties = $reflector->getFilteredProperties(static: false, public: $public ?: null);
+    $reflector = new \ReflectionClass($object);
+    $properties = $reflector->getProperties($public ? \ReflectionProperty::IS_PUBLIC : null);
     $export = [];
     foreach ($properties as $property) {
+      if ($property->isStatic()) {
+        continue;
+      }
       if ($property->isInitialized($object)) {
         $propertyValue = $property->getValue($object);
       }
@@ -513,10 +514,14 @@ class Exporter_ToYamlArray implements ExporterInterface {
    * @return array<string, mixed>
    */
   protected function exportObjectGetterValues(object $object, int $depth): array {
-    $reflector = new ClassReflection($object);
+    $reflector = new \ReflectionClass($object);
     $result = [];
-    foreach ($reflector->getFilteredMethods(static: false, public: true, constructor: false) as $method) {
-      if ($method->hasRequiredParameters()
+    $methods = $reflector->getMethods(\ReflectionMethod::IS_PUBLIC);
+    foreach ($methods as $method) {
+      if ($method->isConstructor()
+        || $method->isStatic()
+        // Skip if the method has required parameters.
+        || ($method->getParameters()[0] ?? NULL)?->isOptional() === false
         || (string) ($method->getReturnType() ?? '?') === 'void'
         || (string) ($method->getReturnType() ?? '?') === 'never'
         || !\preg_match('#^(get|is|has)[A-Z]#', $method->name)

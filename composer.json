@@ -23,7 +23,6 @@
         "ext-json": "*",
         "ock/class-files-iterator": "self.version",
         "ock/helpers": "self.version",
-        "ock/reflection": "self.version",
         "symfony/yaml": "^7.1.5"
     },
     "require-dev": {
