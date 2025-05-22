@@ -21,8 +21,9 @@
     "require": {
         "php": ">=8.3",
         "ext-json": "*",
-        "ock/class-discovery": "self.version",
+        "ock/class-files-iterator": "self.version",
         "ock/helpers": "self.version",
+        "ock/reflection": "self.version",
         "symfony/yaml": "^7.1.5"
     },
     "require-dev": {
