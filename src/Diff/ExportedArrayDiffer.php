@@ -138,7 +138,7 @@ class ExportedArrayDiffer implements DifferInterface {
       if ($i_after >= count($after)) {
         // There are more items in "before" list.
         for (; $i_before < count($before); ++$i_before) {
-          $diff[] = new TaggedValue('--', $before[$i_before]);
+          $diff[] = new TaggedValue('rm', $before[$i_before]);
         }
         return $diff;
       }
@@ -165,7 +165,7 @@ class ExportedArrayDiffer implements DifferInterface {
       if (count($diff_minus) <= count($diff_plus)) {
         return [
           ...$diff,
-          new TaggedValue('--', $before[$i_before]),
+          new TaggedValue('rm', $before[$i_before]),
           ...$diff_minus,
         ];
       }
@@ -193,16 +193,15 @@ class ExportedArrayDiffer implements DifferInterface {
     $diff = [];
     $similar = false;
     foreach (array_diff_key($before, $after) as $key => $item) {
-      $diff['-- ' . $key] = $item;
+      $diff[$key] = new TaggedValue('rm', $item);
     }
     foreach ($shared_keys as $key) {
       $item_diff = $this->compareValues($before[$key], $after[$key]);
       if ($item_diff === false) {
-        $diff['~- ' . $key] = $before[$key];
-        $diff['~+ ' . $key] = $after[$key];
+        $diff[$key] = new TaggedValue('replace', $after[$key]);
       }
       elseif ($item_diff) {
-        $diff['~~ ' . $key] = $item_diff;
+        $diff[$key] = new TaggedValue('diff', $item_diff);
         $similar = true;
       }
       else {
@@ -213,7 +212,7 @@ class ExportedArrayDiffer implements DifferInterface {
       return false;
     }
     foreach (array_diff_key($after, $before) as $key => $item) {
-      $diff['++ ' . $key] = $item;
+      $diff[$key] = new TaggedValue('add', $item);
     }
     return $diff;
   }
@@ -235,16 +234,15 @@ class ExportedArrayDiffer implements DifferInterface {
     );
     $diff = [];
     foreach (array_diff_key($before, $after) as $key => $item) {
-      $diff['-- ' . $key] = $item;
+      $diff[$key] = new TaggedValue('rm', $item);
     }
     foreach ($shared_keys as $key) {
       $item_diff = $this->compareExportedObjectProperty($class, $key, $before[$key], $after[$key]);
       if ($item_diff === false) {
-        $diff['~- ' . $key] = $before[$key];
-        $diff['~+ ' . $key] = $after[$key];
+        $diff[$key] = new TaggedValue('replace', $after[$key]);
       }
       elseif ($item_diff) {
-        $diff['~~ ' . $key] = $item_diff;
+        $diff[$key] = new TaggedValue('diff', $item_diff);
       }
     }
     if (!$diff) {

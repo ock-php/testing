@@ -29,22 +29,16 @@ after:
   'good day': bonjour
   internet: internet
 diff:
-  '-- assoc_drop':
+  assoc_drop: !rm
     x: X
-  '-- remove': remove
-  '~~ assoc_diff':
-    '~- b': B
-    '~+ b': BB
-  '~- assoc_replace':
-    r: R
-  '~+ assoc_replace':
+  remove: !rm remove
+  assoc_diff: !diff
+    b: !replace BB
+  assoc_replace: !replace
     rr: RR
-  '~- good day': 'good day'
-  '~+ good day': bonjour
-  '~- goodbye': goodbye
-  '~+ goodbye': 'a bientot'
-  '~- hello': hello
-  '~+ hello': salut
-  '++ ajouter': ajouter
-  '++ assoc_new':
+  'good day': !replace bonjour
+  goodbye: !replace 'a bientot'
+  hello: !replace salut
+  ajouter: !add ajouter
+  assoc_new: !add
     new: New

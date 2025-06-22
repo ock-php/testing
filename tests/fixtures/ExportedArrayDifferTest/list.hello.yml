@@ -5,5 +5,5 @@ after:
   - goodbye
   - world
 diff:
-  - !-- hello
+  - !rm hello
   - !add goodbye
