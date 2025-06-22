@@ -1,0 +1,50 @@
+before:
+  hello: hello
+  'good day': 'good day'
+  remove: remove
+  assoc_diff:
+    a: A
+    b: B
+  assoc_replace:
+    r: R
+  assoc_keep:
+    b: B
+  assoc_drop:
+    x: X
+  internet: internet
+  goodbye: goodbye
+after:
+  assoc_replace:
+    rr: RR
+  assoc_diff:
+    a: A
+    b: BB
+  hello: salut
+  goodbye: 'a bientot'
+  assoc_keep:
+    b: B
+  assoc_new:
+    new: New
+  ajouter: ajouter
+  'good day': bonjour
+  internet: internet
+diff:
+  '-- assoc_drop':
+    x: X
+  '-- remove': remove
+  '~~ assoc_diff':
+    '~- b': B
+    '~+ b': BB
+  '~- assoc_replace':
+    r: R
+  '~+ assoc_replace':
+    rr: RR
+  '~- good day': 'good day'
+  '~+ good day': bonjour
+  '~- goodbye': goodbye
+  '~+ goodbye': 'a bientot'
+  '~- hello': hello
+  '~+ hello': salut
+  '++ ajouter': ajouter
+  '++ assoc_new':
+    new: New
